@@ -1,0 +1,53 @@
+{% if kind == "heatmap" %}
+    {% if grid %}
+        <div class="heatmap-scroll" tabindex="0" aria-label="Scrollable road and hour heatmap">
+            <table class="heatmap-table" aria-label="Average road speed by hour in IST">
+                <thead>
+                    <tr>
+                        <th scope="col">Road / hour (IST)</th>
+                        {% for hour in range(24) %}
+                            <th scope="col">{{ '%02d' | format(hour) }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for label, speeds in grid %}
+                        <tr>
+                            <th scope="row">{{ label }}</th>
+                            {% for speed in speeds %}
+                                {% set hour = '%02d:00' | format(loop.index0) %}
+                                {% set value = ('%.1f km/h' | format(speed)) if speed is not none else 'No readings' %}
+                                <td title="{{ label }} · {{ hour }} IST · {{ value }}"
+                                    {% if speed is not none %}style="background-color: hsl(208 85% {{ (23 + 69 * speed / maximum) | round(1) }}%)"{% endif %}>
+                                    <span class="visually-hidden">{{ value }}</span>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="heatmap-legend">
+            <span>0</span><span class="heatmap-scale"></span><span>{{ maximum }} km/h</span>
+            <span class="missing-key">Dark grey = no readings</span>
+        </div>
+    {% else %}
+        <p>No roads are configured.</p>
+    {% endif %}
+{% else %}
+    {% if total %}
+        <div class="pie-layout">
+            <div class="congestion-pie" aria-hidden="true"
+                 style="--low-stop: {{ rates.Low }}%; --medium-stop: {{ rates.Low + rates.Medium }}%"></div>
+            <ul class="pie-legend" aria-label="Shares of traffic observations">
+                {% for label, count in counts.items() %}
+                    <li class="{{ label | lower }}">{{ label }} · <strong>{{ '%.1f' | format(rates[label]) }}%</strong> ({{ count }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <p>{{ total }} observations across monitored roads.</p>
+    {% else %}
+        <p>No observations with free-flow speeds in this date range.</p>
+    {% endif %}
+    {% if skipped %}<p>{{ skipped }} observations had no usable free-flow speed.</p>{% endif %}
+{% endif %}

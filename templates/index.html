@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrafficPulse | Delhi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</head>
+<body>
+<aside class="sidebar">
+    <a class="brand" href="/">
+        <span class="signal" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Traffic<b>Pulse</b></span>
+    </a>
+    <nav aria-label="Dashboard views">
+        <button type="button" data-panel="live" aria-pressed="true">Dashboard</button>
+        <button type="button" data-panel="history" aria-pressed="false">Traffic Analysis</button>
+        <button type="button" data-panel="congestion" aria-pressed="false">Congestion Check</button>
+        <button type="button" data-panel="forecast" aria-pressed="false">Prediction</button>
+    </nav>
+</aside>
+<main>
+    <header class="hero">
+        <h1>Traffic<span>Pulse</span></h1>
+        <p class="hero-description">Delhi traffic monitoring and analysis</p>
+        <p class="source">{{ 'Demo · Simulated readings' if demo else 'Live · TomTom Traffic Flow' }}</p>
+    </header>
+    <div id="summary" class="cards" aria-label="Latest road speeds"></div>
+    <p id="live-error" role="status"></p>
+    <div id="road-filter" class="filters">
+        <label>Road segment
+            <select id="road" data-start="{{ start }}" data-end="{{ today }}">
+                {% for item in roads %}
+                    <option value="{{ item.id }}">{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+        <form id="history-form" class="filters" hidden>
+            <label>From <input id="start" type="date" value="{{ start }}" max="{{ today }}" required></label>
+            <label>To <input id="end" type="date" value="{{ today }}" max="{{ today }}" required></label>
+            <button type="submit">Update charts</button>
+        </form>
+    <section id="live">
+        <p id="overview-error" role="status"></p>
+        <div class="overview-charts">
+            <article class="chart-card">
+                <h2>Hourly traffic profile</h2>
+                <p>Average speed by hour over the last 7 days</p>
+                <img id="overview-hourly" alt="Average road speed by hour">
+            </article>
+        </div>
+        <details class="reading-details">
+            <summary>Latest reading details</summary>
+            <div id="cards" class="cards"></div>
+        </details>
+    </section>
+    <section id="history" hidden>
+        <h2>Historical traffic</h2>
+        <p id="history-error" role="status"></p>
+        <article class="chart-card"><h3>Observed speed</h3><img id="trend" alt="Speed observations over time"></article>
+        <article class="chart-card analysis-card">
+            <h3>Location vs hour traffic heatmap</h3>
+            <p>Average speed by road and hour. Hover over a cell for its speed in km/h.</p>
+            <div id="heatmap"></div>
+        </article>
+    </section>
+    <section id="congestion" hidden>
+        <h2>Congestion distribution</h2>
+        <article class="chart-card analysis-card">
+            <h3>Traffic observation categories</h3>
+            <div id="congestion-chart"></div>
+            <details>
+                <summary>How congestion is classified</summary>
+                <p>Low means less than 20% below free-flow speed. Medium means 20% to under 40% below. High means 40% or more below.</p>
+            </details>
+        </article>
+    </section>
+    <section id="forecast" hidden>
+        <h2>Traffic speed prediction</h2>
+        <p>See a 15-minute forecast and explore typical speeds by hour for any monitored road.</p>
+        {% if demo %}<p class="prediction-note">Demo mode uses simulated traffic readings.</p>{% endif %}
+        <div id="prediction-metrics" class="prediction-metrics" hidden>
+            <article class="prediction-card"><h3>Test MAE</h3><strong id="forecast-mae"></strong></article>
+            <article class="prediction-card"><h3>Test RMSE</h3><strong id="forecast-rmse"></strong></article>
+        </div>
+        <p id="forecast-metric-note" class="prediction-note"></p>
+        <div class="prediction-controls">
+            <label>Choose road for estimate
+                <select id="forecast-road">
+                    {% for item in roads %}<option value="{{ item.id }}">{{ item.label }}</option>{% endfor %}
+                </select>
+            </label>
+            <label><span>Hour to estimate (IST) <output id="estimate-hour-label" for="estimate-hour">16:00</output></span>
+                <input id="estimate-hour" type="range" min="0" max="23" value="16">
+            </label>
+            <label>Day type
+                <select id="estimate-day"><option value="weekday">Weekday</option><option value="weekend">Weekend</option></select>
+            </label>
+        </div>
+        <article class="prediction-card" id="hourly-estimate" role="status">
+            <h3>Estimated speed for the selected hour</h3>
+            <strong id="estimated-speed"></strong>
+            <p id="estimate-note"></p>
+        </article>
+        <article id="prediction" class="prediction-card" role="status"></article>
+        <article id="evaluation" hidden>
+            <h3>Forecast accuracy</h3>
+            <p id="test-count"></p>
+            <table><thead><tr><th>Model</th><th>MAE (km/h)</th><th>RMSE (km/h)</th></tr></thead>
+                <tbody id="metrics"></tbody></table>
+            <details>
+                <summary>How to read this table</summary>
+                <ul>
+                    <li>The latest speed baseline assumes the speed stays the same for 15 minutes.</li>
+                    <li>MAE is the average difference between predicted and actual speeds.</li>
+                    <li>RMSE gives more weight to large errors. Lower values are better for both measures.</li>
+                </ul>
+            </details>
+        </article>
+    </section>
+</main>
+</body>
+</html>
