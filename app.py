@@ -1,4 +1,6 @@
+import hmac
 import math
+import os
 from datetime import date, datetime, time, timedelta
 from io import BytesIO
 
@@ -10,6 +12,7 @@ import psycopg
 from flask import Flask, abort, jsonify, render_template, request, send_file
 from matplotlib.figure import Figure
 
+from collector import collect
 from forecast import forecast
 from traffic import IST, MODE, latest_readings, now_slot, readings, road_catalog, road_labels
 
@@ -32,6 +35,24 @@ def dashboard():
     today = now_slot().astimezone(IST).date()
     return render_template("index.html", roads=road_catalog(), demo=MODE == "demo",
                            today=today, start=today - timedelta(days=6))
+
+
+@app.post("/api/collect")
+def collect_scheduled():
+    secret = os.getenv("CRON_SECRET", "").strip()
+    authorization = request.headers.get("Authorization", "")
+    if not secret or not hmac.compare_digest(
+        authorization.encode(), f"Bearer {secret}".encode()
+    ):
+        return jsonify(error="Unauthorized"), 401
+
+    key = os.getenv("TOMTOM_API_KEY", "").strip()
+    if MODE != "live" or not key or not os.getenv("DATABASE_URL", "").strip():
+        return jsonify(error="Live collection is not configured."), 503
+
+    if not collect(key):
+        return jsonify(error="One or more roads could not be collected. Check the function logs."), 503
+    return jsonify(ok=True)
 
 
 @app.get("/api/latest")
